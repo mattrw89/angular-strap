@@ -1,6 +1,6 @@
 /**
  * angular-strap
- * @version v2.0.1 - 2014-04-10
+ * @version v2.0.1 - 2014-04-21
  * @link http://mgcrea.github.io/angular-strap
  * @author Olivier Louvignes (olivier@mg-crea.com)
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -39,8 +39,10 @@ angular.module('mgcrea.ngStrap.typeahead', [
         var parentScope = config.scope;
         var scope = $typeahead.$scope;
         scope.$resetMatches = function () {
-          scope.$matches = [];
-          scope.$activeIndex = 0;
+          scope.$evalAsync(function () {
+            scope.$matches = [];
+            scope.$activeIndex = 0;
+          });
         };
         scope.$resetMatches();
         scope.$activate = function (index) {

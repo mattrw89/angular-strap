@@ -1,6 +1,6 @@
 /**
  * angular-strap
- * @version v2.0.1 - 2014-04-10
+ * @version v2.0.1 - 2014-04-21
  * @link http://mgcrea.github.io/angular-strap
  * @author Olivier Louvignes (olivier@mg-crea.com)
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -106,6 +106,7 @@ angular.module('mgcrea.ngStrap.timepicker', [
         $timepicker.switchMeridian = function (date) {
           var hours = (date || controller.$dateValue).getHours();
           controller.$dateValue.setHours(hours < 12 ? hours + 12 : hours - 12);
+          controller.$setViewValue(controller.$dateValue);
           controller.$render();
         };
         // Protected methods
@@ -209,26 +210,38 @@ angular.module('mgcrea.ngStrap.timepicker', [
               selectedIndex = selectedIndex < count - 1 ? selectedIndex + 1 : 0;
           }
           // Update values (up, down)
+          var selectRange = [
+              0,
+              hoursLength
+            ];
           if (selectedIndex === 0) {
-            if (lateralMove)
-              return createSelection(0, hoursLength);
             if (evt.keyCode === 38)
               newDate.setHours(hours - parseInt(options.hourStep, 10));
             else if (evt.keyCode === 40)
               newDate.setHours(hours + parseInt(options.hourStep, 10));
+            selectRange = [
+              0,
+              hoursLength
+            ];
           } else if (selectedIndex === 1) {
-            if (lateralMove)
-              return createSelection(hoursLength + 1, hoursLength + 1 + minutesLength);
             if (evt.keyCode === 38)
               newDate.setMinutes(minutes - parseInt(options.minuteStep, 10));
             else if (evt.keyCode === 40)
               newDate.setMinutes(minutes + parseInt(options.minuteStep, 10));
+            selectRange = [
+              hoursLength + 1,
+              hoursLength + 1 + minutesLength
+            ];
           } else if (selectedIndex === 2) {
-            if (lateralMove)
-              return createSelection(hoursLength + 1 + minutesLength + 1, hoursLength + 1 + minutesLength + 3);
-            $timepicker.switchMeridian();
+            if (!lateralMove)
+              $timepicker.switchMeridian();
+            selectRange = [
+              hoursLength + 1 + minutesLength + 1,
+              hoursLength + 1 + minutesLength + 3
+            ];
           }
           $timepicker.select(newDate, selectedIndex, true);
+          createSelection(selectRange[0], selectRange[1]);
           parentScope.$digest();
         };
         // Private
@@ -330,7 +343,8 @@ angular.module('mgcrea.ngStrap.timepicker', [
           'timeFormat',
           'useNative',
           'hourStep',
-          'minuteStep'
+          'minuteStep',
+          'length'
         ], function (key) {
           if (angular.isDefined(attr[key]))
             options[key] = attr[key];

@@ -1,6 +1,6 @@
 /**
  * angular-strap
- * @version v2.0.1 - 2014-04-10
+ * @version v2.0.1 - 2014-04-21
  * @link http://mgcrea.github.io/angular-strap
  * @author Olivier Louvignes (olivier@mg-crea.com)
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -957,7 +957,7 @@ angular.module('mgcrea.ngStrap.datepicker', [
               },
               build: function () {
                 var firstDayOfMonth = new Date(viewDate.year, viewDate.month, 1), firstDayOfMonthOffset = firstDayOfMonth.getTimezoneOffset();
-                var firstDate = new Date(+firstDayOfMonth - mod(firstDayOfMonth.getDay() - options.startWeek, 6) * 86400000), firstDateOffset = firstDate.getTimezoneOffset();
+                var firstDate = new Date(+firstDayOfMonth - mod(firstDayOfMonth.getDay() - options.startWeek, 7) * 86400000), firstDateOffset = firstDate.getTimezoneOffset();
                 // Handle daylight time switch
                 if (firstDateOffset !== firstDayOfMonthOffset)
                   firstDate = new Date(+firstDate + (firstDateOffset - firstDayOfMonthOffset) * 60000);
@@ -974,6 +974,7 @@ angular.module('mgcrea.ngStrap.datepicker', [
                   });
                 }
                 scope.title = dateFilter(firstDayOfMonth, 'MMMM yyyy');
+                scope.showLabels = true;
                 scope.labels = weekDaysLabelsHtml;
                 scope.rows = split(days, this.split);
                 this.built = true;
@@ -986,14 +987,17 @@ angular.module('mgcrea.ngStrap.datepicker', [
               },
               onKeyDown: function (evt) {
                 var actualTime = picker.$date.getTime();
+                var newDate;
                 if (evt.keyCode === 37)
-                  picker.select(new Date(actualTime - 1 * 86400000), true);
+                  newDate = new Date(actualTime - 1 * 86400000);
                 else if (evt.keyCode === 38)
-                  picker.select(new Date(actualTime - 7 * 86400000), true);
+                  newDate = new Date(actualTime - 7 * 86400000);
                 else if (evt.keyCode === 39)
-                  picker.select(new Date(actualTime + 1 * 86400000), true);
+                  newDate = new Date(actualTime + 1 * 86400000);
                 else if (evt.keyCode === 40)
-                  picker.select(new Date(actualTime + 7 * 86400000), true);
+                  newDate = new Date(actualTime + 7 * 86400000);
+                if (!this.isDisabled(newDate))
+                  picker.select(newDate, true);
               }
             },
             {
@@ -1030,7 +1034,7 @@ angular.module('mgcrea.ngStrap.datepicker', [
                   });
                 }
                 scope.title = dateFilter(month, 'yyyy');
-                scope.labels = false;
+                scope.showLabels = false;
                 scope.rows = split(months, this.split);
                 this.built = true;
               },
@@ -1043,14 +1047,17 @@ angular.module('mgcrea.ngStrap.datepicker', [
               },
               onKeyDown: function (evt) {
                 var actualMonth = picker.$date.getMonth();
+                var newDate = new Date(picker.$date);
                 if (evt.keyCode === 37)
-                  picker.select(new Date(picker.$date.setMonth(actualMonth - 1)), true);
+                  newDate.setMonth(actualMonth - 1);
                 else if (evt.keyCode === 38)
-                  picker.select(new Date(picker.$date.setMonth(actualMonth - 4)), true);
+                  newDate.setMonth(actualMonth - 4);
                 else if (evt.keyCode === 39)
-                  picker.select(new Date(picker.$date.setMonth(actualMonth + 1)), true);
+                  newDate.setMonth(actualMonth + 1);
                 else if (evt.keyCode === 40)
-                  picker.select(new Date(picker.$date.setMonth(actualMonth + 4)), true);
+                  newDate.setMonth(actualMonth + 4);
+                if (!this.isDisabled(newDate))
+                  picker.select(newDate, true);
               }
             },
             {
@@ -1088,7 +1095,7 @@ angular.module('mgcrea.ngStrap.datepicker', [
                   });
                 }
                 scope.title = years[0].label + '-' + years[years.length - 1].label;
-                scope.labels = false;
+                scope.showLabels = false;
                 scope.rows = split(years, this.split);
                 this.built = true;
               },
@@ -1100,15 +1107,17 @@ angular.module('mgcrea.ngStrap.datepicker', [
                 return lastDate < options.minDate || date.getTime() > options.maxDate;
               },
               onKeyDown: function (evt) {
-                var actualYear = picker.$date.getFullYear();
+                var actualYear = picker.$date.getFullYear(), newDate = new Date(picker.$date);
                 if (evt.keyCode === 37)
-                  picker.select(new Date(picker.$date.setYear(actualYear - 1)), true);
+                  newDate.setYear(actualYear - 1);
                 else if (evt.keyCode === 38)
-                  picker.select(new Date(picker.$date.setYear(actualYear - 4)), true);
+                  newDate.setYear(actualYear - 4);
                 else if (evt.keyCode === 39)
-                  picker.select(new Date(picker.$date.setYear(actualYear + 1)), true);
+                  newDate.setYear(actualYear + 1);
                 else if (evt.keyCode === 40)
-                  picker.select(new Date(picker.$date.setYear(actualYear + 4)), true);
+                  newDate.setYear(actualYear + 4);
+                if (!this.isDisabled(newDate))
+                  picker.select(newDate, true);
               }
             }
           ];
@@ -2738,6 +2747,7 @@ angular.module('mgcrea.ngStrap.timepicker', [
         $timepicker.switchMeridian = function (date) {
           var hours = (date || controller.$dateValue).getHours();
           controller.$dateValue.setHours(hours < 12 ? hours + 12 : hours - 12);
+          controller.$setViewValue(controller.$dateValue);
           controller.$render();
         };
         // Protected methods
@@ -2841,26 +2851,38 @@ angular.module('mgcrea.ngStrap.timepicker', [
               selectedIndex = selectedIndex < count - 1 ? selectedIndex + 1 : 0;
           }
           // Update values (up, down)
+          var selectRange = [
+              0,
+              hoursLength
+            ];
           if (selectedIndex === 0) {
-            if (lateralMove)
-              return createSelection(0, hoursLength);
             if (evt.keyCode === 38)
               newDate.setHours(hours - parseInt(options.hourStep, 10));
             else if (evt.keyCode === 40)
               newDate.setHours(hours + parseInt(options.hourStep, 10));
+            selectRange = [
+              0,
+              hoursLength
+            ];
           } else if (selectedIndex === 1) {
-            if (lateralMove)
-              return createSelection(hoursLength + 1, hoursLength + 1 + minutesLength);
             if (evt.keyCode === 38)
               newDate.setMinutes(minutes - parseInt(options.minuteStep, 10));
             else if (evt.keyCode === 40)
               newDate.setMinutes(minutes + parseInt(options.minuteStep, 10));
+            selectRange = [
+              hoursLength + 1,
+              hoursLength + 1 + minutesLength
+            ];
           } else if (selectedIndex === 2) {
-            if (lateralMove)
-              return createSelection(hoursLength + 1 + minutesLength + 1, hoursLength + 1 + minutesLength + 3);
-            $timepicker.switchMeridian();
+            if (!lateralMove)
+              $timepicker.switchMeridian();
+            selectRange = [
+              hoursLength + 1 + minutesLength + 1,
+              hoursLength + 1 + minutesLength + 3
+            ];
           }
           $timepicker.select(newDate, selectedIndex, true);
+          createSelection(selectRange[0], selectRange[1]);
           parentScope.$digest();
         };
         // Private
@@ -2962,7 +2984,8 @@ angular.module('mgcrea.ngStrap.timepicker', [
           'timeFormat',
           'useNative',
           'hourStep',
-          'minuteStep'
+          'minuteStep',
+          'length'
         ], function (key) {
           if (angular.isDefined(attr[key]))
             options[key] = attr[key];
@@ -3494,8 +3517,10 @@ angular.module('mgcrea.ngStrap.typeahead', [
         var parentScope = config.scope;
         var scope = $typeahead.$scope;
         scope.$resetMatches = function () {
-          scope.$matches = [];
-          scope.$activeIndex = 0;
+          scope.$evalAsync(function () {
+            scope.$matches = [];
+            scope.$activeIndex = 0;
+          });
         };
         scope.$resetMatches();
         scope.$activate = function (index) {
